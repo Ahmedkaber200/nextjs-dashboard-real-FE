@@ -32,7 +32,7 @@ const chartConfig = {
     },
     chrome: {
       label: "Chrome",
-      color: "--chart-1))",
+      color: "#ff0000",
     },
     safari: {
       label: "Safari",
