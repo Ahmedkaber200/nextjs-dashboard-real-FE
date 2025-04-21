@@ -1,11 +1,23 @@
-import React from 'react'
+"use client";
+import { get } from "@/client/api-client";
+import { CustomerTable } from "./customer-table";
+import { useQuery } from "@tanstack/react-query";
 
-const page = () => {
+export  function Page() {
+  const {data:data , isLoading} = useQuery({queryKey:['customers'],queryFn:() => get('/customers')})
+
   return (
-    <div>
-      customer
+    <div className="">
+      {
+        isLoading ? <div className="flex justify-center items-center h-screen">Loading...</div> : 
+        <CustomerTable data={data as any} />
+      }
+      
     </div>
-  )
+  );
 }
 
-export default page
+export default Page;
+
+
+

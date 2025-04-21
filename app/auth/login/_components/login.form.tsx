@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -23,6 +22,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { get, post, setAuthToken } from "@/client/api-client";
+import {useRouter} from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email(),
@@ -31,7 +33,6 @@ const formSchema = z.object({
   }),
 });
 
-
 export function LoginForm({
   className,
   ...props
@@ -39,10 +40,20 @@ export function LoginForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
+  const {push} = useRouter();
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: (e: z.infer<typeof formSchema>) => post("/login", e),
+    onSuccess: (data:any) => {
+        if(data){
+          setAuthToken(data.token);
+          push('/dashboard');
+        }
+    },
+  });
   function onSubmit(values: z.infer<typeof formSchema>) {
-    
+    mutateAsync(values);
   }
-  
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -81,10 +92,9 @@ export function LoginForm({
                   </FormItem>
                 )}
               />
-              <Button type="submit">Submit</Button>
+              <Button isLoading={isPending} type="submit">Submit</Button>
             </form>
           </Form>
-         
         </CardContent>
       </Card>
     </div>

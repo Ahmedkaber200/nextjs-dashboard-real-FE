@@ -18,6 +18,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import Link from "next/link";
 
 // This is sample data.
 type MenuItem = {
@@ -32,7 +33,7 @@ const data:MenuItem[] =  [
     },
     {
       title: "Customers",
-    url: "/customers",
+      url: "/customers",
     //   items: [
     //     {
     //       title: "List",
@@ -75,7 +76,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {item.items.map((item) => (
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton asChild isActive={false}>
-                            <a href={item.url}>{item.title}</a>
+                            <Link href={item.url}>{item.title}</Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -87,9 +88,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ) : (
             <SidebarMenuItem key={item.title} className="list-none">
               <SidebarMenuButton asChild>
-                <a href={item.url} className="font-medium">
+                <Link href={item.url} className="font-medium">
                   {item.title}
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )

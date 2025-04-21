@@ -124,3 +124,5 @@ export function CustomerChart() {
     </Card>
   )
 }
+
+export default CustomerChart
