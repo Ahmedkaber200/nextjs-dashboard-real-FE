@@ -14,6 +14,7 @@ type RequestConfig = Omit<RequestInit, "headers"> & {
 };
 
 const getAuthToken = () => Cookies.get("auth_token");
+console.log('Auth Token:', getAuthToken);
 
 // Request Interceptor
 const requestInterceptor = (config: RequestConfig): RequestConfig => {
