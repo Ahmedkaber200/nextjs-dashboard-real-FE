@@ -1,6 +1,6 @@
 "use client";
 
-import { CustomerForm }  from "./customer-form";
+import { CustomerForm }  from "../_components/customer-form";
 
 export function Customer() {
     return (

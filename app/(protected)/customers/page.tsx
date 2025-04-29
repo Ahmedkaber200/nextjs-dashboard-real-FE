@@ -1,7 +1,9 @@
 "use client";
 import { get } from "@/client/api-client";
-import { CustomerTable } from "./customer-table";
+
 import { useQuery } from "@tanstack/react-query";
+import { CustomerTable } from "./_components/customer-table";
+
 
 export function Page() {
   const {data:data , isLoading} = useQuery({queryKey:['customers'],queryFn:() => get('/customers')})

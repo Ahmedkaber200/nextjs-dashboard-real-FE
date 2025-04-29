@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
-import { post } from "@/client/api-client";
+import { post, put } from "@/client/api-client";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name is required" }),
@@ -24,46 +25,71 @@ const formSchema = z.object({
   address: z.string().min(5, { message: "Address is required" }),
 });
 
-export function CustomerForm() {
+type CustomerFormProps = {
+  mode?: "create" | "edit";
+  initialData?: {
+    id?: number;
+    name: string;
+    email: string;
+    contact: string;
+    address: string;
+  };
+};
+
+export function CustomerForm({ mode = "create", initialData }: CustomerFormProps) {
   const router = useRouter();
+  console.log(initialData)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-      defaultValues: {
-        name: "",
-        email: "",
-        contact: "",
-        address: "",
+    defaultValues: {
+      name: "",
+      email: "",
+      contact: "",
+      address: "",
     },
   });
 
-  const { mutate, isPending, isSuccess, isError } = useMutation({
+  // Set form values when in edit mode
+  useEffect(() => {
+    if (mode === "edit" && initialData) {
+      form.reset({
+        name: initialData.name,
+        email: initialData.email,
+        contact: initialData.contact,
+        address: initialData.address,
+      });
+    }
+  }, [mode, initialData, form]);
+
+  const { mutate, isPending } = useMutation({
     mutationFn: (data: z.infer<typeof formSchema>) =>
-      post("/customers", data),
+      mode === "create" 
+        ? post("/customers", data)
+        : put(`/customers/${initialData?.id}`, data),
+    onSuccess: () => {
+      form.reset();
+      router.push("/customers");
+      router.refresh(); // Refresh to show updated data
+    },
+    onError: (error) => {
+      console.error(`Failed to ${mode} customer:`, error);
+    },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate(values, {
-      onSuccess: () => {
-        console.log("Customer added successfully!");
-        form.reset();
-        router.push("/customers"); // <-- redirect to /customers
-      },
-      onError: (error) => {
-        console.error("Failed to add customer:", error);
-      },
-    });
+    mutate(values);
   };
-
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Add Customer</CardTitle>
+        <CardTitle>
+          {mode === "create" ? "Add Customer" : "Edit Customer"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Name */}
             <FormField
               control={form.control}
               name="name"
@@ -77,7 +103,7 @@ export function CustomerForm() {
                 </FormItem>
               )}
             />
-            {/* Email */}
+            
             <FormField
               control={form.control}
               name="email"
@@ -85,13 +111,18 @@ export function CustomerForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter email" {...field} />
+                    <Input 
+                      placeholder="Enter email" 
+                      {...field} 
+                      type="email"
+                      disabled={mode === "edit"} // Disable email in edit mode
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {/* Contact */}
+            
             <FormField
               control={form.control}
               name="contact"
@@ -105,7 +136,7 @@ export function CustomerForm() {
                 </FormItem>
               )}
             />
-            {/* Address */}
+            
             <FormField
               control={form.control}
               name="address"
@@ -120,11 +151,24 @@ export function CustomerForm() {
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Submitting..." : "Submit"}
-            </Button>
-
-            {/* <Button type="submit" className="w-full">Submit</Button> */}
+            <div className="flex gap-4">
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isPending}
+              >
+                {isPending ? "Submitting..." : "Submit"}
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push("/customers")}
+              >
+                Cancel
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

@@ -46,7 +46,7 @@ const responseInterceptor = async <T>(response: Response): Promise<T> => {
   }
 
   if (data.data === undefined) {
-    throw new Error("No data received from API");
+    throw new Error(data.message || "No data received from API");
   }
 
   return data.data;

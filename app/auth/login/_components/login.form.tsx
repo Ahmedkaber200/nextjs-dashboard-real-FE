@@ -39,6 +39,10 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+  },
   });
   const {push} = useRouter();
   const { mutateAsync, isPending } = useMutation({
@@ -47,6 +51,9 @@ export function LoginForm({
         if(data){
           setAuthToken(data.token);
           push('/dashboard');
+        }
+        else{
+          console.log("Invalid credentials");
         }
     },
   });

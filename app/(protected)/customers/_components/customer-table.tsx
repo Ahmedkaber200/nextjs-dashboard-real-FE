@@ -3,13 +3,14 @@ import {
   TableBody,
   TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { del } from "@/client/api-client";
 
 interface Customer {
   id: number;
@@ -19,16 +20,38 @@ interface Customer {
   address: string;
 }
 
+export function useDeleteCustomer() {
+  const queryClient = useQueryClient();
+
+  const deleteCustomerApi = async (id: number) => {
+    console.log("Deleting customer with ID:", id);
+
+    const res = await del(`/customers/${id}`);
+    
+    console.log('Customer deleted successfully:', res);
+    return res;
+  };
+
+  return useMutation({
+    mutationFn: deleteCustomerApi,
+    onSuccess: () => {
+      console.log('Invalidating customers list...');
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+    onError: (error) => {
+      console.error('Error deleting customer:', error);
+    },
+  });
+}
+
 export function CustomerTable({ data }: { data: Customer[] }) {
+  const router = useRouter();
+  const { mutate: deleteCustomer, isPending } = useDeleteCustomer();
+
   const handleEdit = (id: number) => {
+    router.push(`/customers/${id}`);
     console.log("Edit customer with ID:", id);
   };
-
-  const handleDelete = (id: number) => {
-    console.log("Delete customer with ID:", id);
-  };
-
-  const router = useRouter();
 
   return (
     <div>
@@ -39,7 +62,7 @@ export function CustomerTable({ data }: { data: Customer[] }) {
       </div>
 
       <Table>
-        <TableCaption>A list of your recent invoices.</TableCaption>
+        <TableCaption>A list of your customers.</TableCaption>
 
         <TableHeader>
           <TableRow>
@@ -64,10 +87,11 @@ export function CustomerTable({ data }: { data: Customer[] }) {
                     Edit
                   </Button>
 
-                  <Button variant="outline" onClick={() => handleDelete(item.id)}>
-                    Delete
+                  <Button variant="outline" onClick={() => deleteCustomer(item.id)}>
+                    {isPending ? 'Deleting...' : 'Delete'}
                   </Button>
-                  </div>
+
+                </div>
               </TableCell>
             </TableRow>
           ))}
