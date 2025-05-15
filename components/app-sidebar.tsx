@@ -50,6 +50,10 @@ const data: MenuItem[] = [
     title: "Products",
     url: "/products",
   },
+  {
+    title: "invoices",
+    url: "/invoices",
+  },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
