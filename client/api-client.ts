@@ -14,7 +14,7 @@ type RequestConfig = Omit<RequestInit, "headers"> & {
 };
 
 const getAuthToken = () => Cookies.get("auth_token");
-console.log('Auth Token:', getAuthToken);
+// console.log('Auth Token:', getAuthToken);
 
 // Request Interceptor
 const requestInterceptor = (config: RequestConfig): RequestConfig => {
@@ -108,9 +108,3 @@ export const setAuthToken = (token: string) => {
   });
 };
 
-export const removeAuthToken = () => {
-  Cookies.remove("auth_token");
-};
-export const getAuthTokenFromCookies = () => {
-  return Cookies.get("auth_token") || null;
-};

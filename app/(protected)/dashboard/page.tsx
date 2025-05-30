@@ -9,27 +9,17 @@ import { useRouter } from "next/navigation";
 import { getCookie } from 'cookies-next'; // Correct method to get cookie on client
 
 export function Home() {
-
-   const router = useRouter();
-  
-    useEffect(() => {
-      const token = getCookie('auth_token');
-  
-      if (!token) {
-        router.push('auth/login');
-      }
-    }, [router]);
-  
-    const { data, isLoading } = useQuery({
-      queryKey: ['customers'],
-      queryFn: () => get('/customers'),
-    });
+    // const { data, isLoading } = useQuery({
+    //   queryKey: ['customers'],
+    //   queryFn: () => get('/customers'),
+    // });
   
   return (
-    <div className="grid grid-cols-3 gap-8">
-      <LogisticChart />
+    <div className="grid grid-cols-3 gap-8">  
+      asdsdadadsasd
+      {/* <LogisticChart />
       <CustomerChart />
-      <AreaCharts />
+      <AreaCharts /> */}
     </div>
   );
 }

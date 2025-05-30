@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     // Verify token with Laravel API
-    const response = await fetch('http://localhost:8000/api/customers', { // Use a dedicated verify endpoint
+    const response = await fetch('http://localhost:8000/api/getprofile', { // Use a dedicated verify endpoint
       method: 'GET',
       headers: {
         'Accept': 'application/json',

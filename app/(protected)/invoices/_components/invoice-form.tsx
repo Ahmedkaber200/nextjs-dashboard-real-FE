@@ -1,112 +1,177 @@
-"use client"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { useMutation } from "@tanstack/react-query"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { Check, FileText, User, Package, AlertCircle } from "lucide-react"
+"use client";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Check, FileText, User, Package, AlertCircle } from "lucide-react";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MultiSelect } from "@/components/ui/multi-select"
-import { Icons } from "@/components/ui/icons"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Icons } from "@/components/ui/icons";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 
 // Import API client from the correct location
-import { post, put } from "@/client/api-client"
+import { post, put, get } from "@/client/api-client";
+import { useStore } from "@/app/hooks/usestore";
 
 const frameworksList = [
   {
     value: "next.js",
     label: "Next.js",
-    icon: Icons.dog,
   },
   {
     value: "sveltekit",
     label: "SvelteKit",
-    icon: Icons.cat,
   },
   {
     value: "nuxt.js",
     label: "Nuxt.js",
-    icon: Icons.turtle,
   },
   {
     value: "remix",
     label: "Remix",
-    icon: Icons.rabbit,
   },
   {
     value: "astro",
     label: "Astro",
-    icon: Icons.fish,
   },
-]
+];
 
 const formSchema = z.object({
-  customer_name: z.string().min(2, { message: "Customer name is required" }),
-  product_details: z.any().refine((val) => val.length > 0, { message: "At least one product is required" }),
+  customer_name: z.coerce.number().min(1, { message: "Customer is required" }),
+
+  // customer_name: z.string().min(2, { message: "Customer name is required" }),
+  product_details: z.any().refine((val) => val.length > 0, {
+    message: "At least one product is required",
+  }),
   status: z.string().min(1, { message: "Status is required" }),
-})
+});
 
 type InvoiceFormProps = {
-  mode?: "create" | "edit"
+  mode?: "create" | "edit";
   initialData?: {
-    id?: number
-    customer_name: string
-    product_details: string
-    status: string
-  }
-}
+    id?: number;
+    customer_id: number;
+      product_details: Array<{
+      id: number;
+      name: string;
+      price: number;
+    }>;
+     status: "pending" | "paid";
+    // total_amount: number;
+  };
+};
 
-export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) {
-  const router = useRouter()
-
+export function InvoiceForm({
+  mode = "create",
+  initialData,
+}: InvoiceFormProps) {
+  const router = useRouter();
+  const { customers } = useStore();
+  
+  const { data: products = [], isPending: loading } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => get("/products"),
+  });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customer_name: "",
-      product_details: "",
+      customer_name: 0,
+      product_details: [],
       status: "",
     },
-  })
+  });
 
-  useEffect(() => {
-    if (mode === "edit" && initialData) {
-      form.reset(initialData)
-    }
-  }, [mode, initialData, form])
+  
+  // useEffect(() => {
+  //   if (mode === "edit" && initialData) {
+  //     form.reset(initialData);
+  //   }
+  // }, [mode, initialData, form]);
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
-      try {
-        if (mode === "create") {
-          return await post("/invoices", data)
-        } else {
-          return await put(`/invoices/${initialData?.id}`, data)
-        }
-      } catch (error) {
-        console.error(`Failed to ${mode} invoice:`, error)
-        throw error
+  // const { mutate, isPending } = useMutation({
+  //   mutationFn: async (data: z.infer<typeof formSchema>) => {
+      
+  //     try {
+  //       if (mode === "create") {
+  //         return await post("/invoices", data);
+  //       } else {
+  //         return await put(`/invoices/${initialData?.id}`, data);
+  //       }
+  //     } catch (error) {
+  //       console.error(`Failed to ${mode} invoice:`, error);
+  //       throw error;
+  //     }
+  //   },
+  //   onSuccess: () => {
+  //     form.reset();
+  //     router.push("/invoices");
+  //     router.refresh();
+  //   },
+  //   onError: (error) => {
+  //     console.error(`Failed to ${mode} invoice:`, error);
+  //   },
+  // });
+
+   // Set form values when in edit mode
+    useEffect(() => {
+      if (mode === "edit" && initialData) {
+        form.reset({
+          product_details: initialData.product_details,
+          status: initialData.status,
+        });
       }
-    },
-    onSuccess: () => {
-      form.reset()
-      router.push("/invoices")
-      router.refresh()
-    },
-    onError: (error) => {
-      console.error(`Failed to ${mode} invoice:`, error)
-    },
-  })
+    }, [mode, initialData, form]);
+
+
+    const { mutate, isPending } = useMutation({
+      mutationFn: (data: z.infer<typeof formSchema>) =>
+        mode === "create" 
+          ? post("/invoices", data)
+          : put(`/invoices/${initialData?.id}`, data),
+      onSuccess: () => {
+        form.reset();
+        router.push("/invoices");
+        router.refresh(); // Refresh to show updated data
+      },
+      onError: (error) => {
+        console.error(`Failed to ${mode} invoices:`, error);
+      },
+    });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate(values)
-  }
+    mutate(values);
+  };
+
+  // type Customer = {
+  //   id: number;
+  //   name: string;
+  // };
 
   return (
     <div className="w-full ">
@@ -121,7 +186,8 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
             </CardTitle>
           </div>
           <CardDescription>
-            Fill in the details below to {mode === "create" ? "create a new" : "update the"} invoice
+            Fill in the details below to{" "}
+            {mode === "create" ? "create a new" : "update the"} invoice
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8">
@@ -137,30 +203,31 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
                       <User className="h-4 w-4" />
                       Customer Name
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                    onValueChange={(value) => field.onChange(Number(value))}
+                    value={field.value?.toString()}
+                    //  onValueChange={field.onChange}
+                    //   value={field.value?.toString() || ""}
+                    //  onValueChange={(value) => field.onChange(Number(value))}
+                    //   value={field.value?.toString()}
+                      // onValueChange={field.onChange}
+                      // defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full h-12 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="max-h-80">
-                        <div className="p-2 border-b">
-                          <Badge variant="outline" className="w-full justify-start text-xs font-normal py-1 px-2">
-                            Select a customer
-                          </Badge>
-                        </div>
-                        <SelectItem value="Ali" className="py-3 cursor-pointer">
-                          Ali
-                        </SelectItem>
-                        <SelectItem value="Asad" className="py-3 cursor-pointer">
-                          Asad
-                        </SelectItem>
-                        <SelectItem value="Hamza" className="py-3 cursor-pointer">
-                          Hamza
-                        </SelectItem>
-                        <SelectItem value="Fahad" className="py-3 cursor-pointer">
-                          Fahad
-                        </SelectItem>
+                        {customers?.map((customer: any) => (
+                          <SelectItem
+                            key={customer.id}
+                            value={customer.id.toString()}
+                            className="py-3 cursor-pointer"
+                          >
+                            {customer.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -179,10 +246,29 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
                       Product Details
                     </FormLabel>
                     <FormControl>
-                      <MultiSelect
-                        options={frameworksList}
+
+                    <MultiSelect
+                      options={(products as any)?.map((product: any) => ({
+                        value: JSON.stringify({
+                          id: product.id,
+                          name: product.name,
+                          price: product.price,
+                        }),
+                          label: `${product.id} - ${product.name} - Rs ${product.price}`,
+                      }))}
+                      onValueChange={(values: string[]) =>
+                        field.onChange(values.map((val) => JSON.parse(val)))
+                      }
+                      placeholder="Select products"
+
+
+                      /* <MultiSelect
+                        options={(products as any)?.map((product: any) => ({
+                          value: product.name,
+                          label: product.name,
+                        }))}
                         onValueChange={field.onChange}
-                        placeholder="Select products"
+                        placeholder="Select products" */
                         variant="inverted"
                         animation={2}
                         maxCount={3}
@@ -212,7 +298,11 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
                       >
                         <FormItem className="flex">
                           <FormControl>
-                            <RadioGroupItem value="pending" id="pending" className="peer sr-only" />
+                            <RadioGroupItem
+                              value="pending"
+                              id="pending"
+                              className="peer sr-only"
+                            />
                           </FormControl>
                           <FormLabel
                             htmlFor="pending"
@@ -220,14 +310,20 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
                           >
                             <div className="flex flex-col gap-1">
                               <span>Pending</span>
-                              <span className="text-xs text-muted-foreground">Awaiting payment</span>
+                              <span className="text-xs text-muted-foreground">
+                                Awaiting payment
+                              </span>
                             </div>
                             <Check className="h-5 w-5 text-primary opacity-0 peer-data-[state=checked]:opacity-100" />
                           </FormLabel>
                         </FormItem>
                         <FormItem className="flex">
                           <FormControl>
-                            <RadioGroupItem value="paid" id="paid" className="peer sr-only" />
+                            <RadioGroupItem
+                              value="paid"
+                              id="paid"
+                              className="peer sr-only"
+                            />
                           </FormControl>
                           <FormLabel
                             htmlFor="paid"
@@ -235,12 +331,13 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
                           >
                             <div className="flex flex-col gap-1">
                               <span>Paid</span>
-                              <span className="text-xs text-muted-foreground">Payment received</span>
+                              <span className="text-xs text-muted-foreground">
+                                Payment received
+                              </span>
                             </div>
                             <Check className="h-5 w-5 text-primary opacity-0 peer-data-[state=checked]:opacity-100" />
                           </FormLabel>
                         </FormItem>
-
                       </RadioGroup>
                     </FormControl>
                     <FormMessage />
@@ -253,14 +350,9 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
                   isLoading={isPending}
                   type="submit"
                   className="w-36 h-12 text-base font-medium rounded-lg transition-all shadow-md hover:shadow-lg"
-             
                 >
-                  { mode === "create" ? (
-                    "Create Invoice"
-                  ) : (
-                    "Update Invoice"
-                  )}
-                </Button> 
+                  {mode === "create" ? "Create Invoice" : "Update Invoice"}
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -275,5 +367,5 @@ export function InvoiceForm({ mode = "create", initialData }: InvoiceFormProps) 
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
