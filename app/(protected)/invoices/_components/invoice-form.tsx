@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Check, FileText, User, Package, AlertCircle } from "lucide-react";
 
 import {
@@ -39,33 +39,33 @@ import { Badge } from "@/components/ui/badge";
 import { post, put, get } from "@/client/api-client";
 import { useStore } from "@/app/hooks/usestore";
 
-const frameworksList = [
-  {
-    value: "next.js",
-    label: "Next.js",
-  },
-  {
-    value: "sveltekit",
-    label: "SvelteKit",
-  },
-  {
-    value: "nuxt.js",
-    label: "Nuxt.js",
-  },
-  {
-    value: "remix",
-    label: "Remix",
-  },
-  {
-    value: "astro",
-    label: "Astro",
-  },
-];
+// const frameworksList = [
+//   {
+//     value: "next.js",
+//     label: "Next.js",
+//   },
+//   {
+//     value: "sveltekit",
+//     label: "SvelteKit",
+//   },
+//   {
+//     value: "nuxt.js",
+//     label: "Nuxt.js",
+//   },
+//   {
+//     value: "remix",
+//     label: "Remix",
+//   },
+//   {
+//     value: "astro",
+//     label: "Astro",
+//   },
+// ];
 
 const formSchema = z.object({
-  customer_name: z.coerce.number().min(1, { message: "Customer is required" }),
+  customer_id: z.coerce.number().min(1, { message: "Customer is required" }),
 
-  // customer_name: z.string().min(2, { message: "Customer name is required" }),
+  // customer_id: z.string().min(2, { message: "Customer name is required" }),
   product_details: z.any().refine((val) => val.length > 0, {
     message: "At least one product is required",
   }),
@@ -77,12 +77,13 @@ type InvoiceFormProps = {
   initialData?: {
     id?: number;
     customer_id: number;
-      product_details: Array<{
+    product_details: Array<{
       id: number;
       name: string;
       price: number;
     }>;
-     status: "pending" | "paid";
+    total_amount?: number;
+    status: "pending" | "paid";
     // total_amount: number;
   };
 };
@@ -93,7 +94,7 @@ export function InvoiceForm({
 }: InvoiceFormProps) {
   const router = useRouter();
   const { customers } = useStore();
-  
+
   const { data: products = [], isPending: loading } = useQuery({
     queryKey: ["products"],
     queryFn: () => get("/products"),
@@ -101,13 +102,12 @@ export function InvoiceForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customer_name: 0,
+      customer_id: 0,
       product_details: [],
       status: "",
     },
   });
 
-  
   // useEffect(() => {
   //   if (mode === "edit" && initialData) {
   //     form.reset(initialData);
@@ -116,7 +116,7 @@ export function InvoiceForm({
 
   // const { mutate, isPending } = useMutation({
   //   mutationFn: async (data: z.infer<typeof formSchema>) => {
-      
+
   //     try {
   //       if (mode === "create") {
   //         return await post("/invoices", data);
@@ -138,34 +138,43 @@ export function InvoiceForm({
   //   },
   // });
 
-   // Set form values when in edit mode
-    useEffect(() => {
-      if (mode === "edit" && initialData) {
-        form.reset({
-          product_details: initialData.product_details,
-          status: initialData.status,
-        });
-      }
-    }, [mode, initialData, form]);
+  // Set form values when in edit mode
+  useEffect(() => {
+    if (mode === "edit" && initialData) {
+      form.reset({
+        product_details: initialData.product_details,
+        status: initialData.status,
+      });
+    }
+  }, [mode, initialData, form]);
 
+  const { mutate, isPending } = useMutation({
+    mutationFn: (data: z.infer<typeof formSchema>) =>
+      mode === "create"
+        ? post("/invoices", data)
+        : put(`/invoices/${initialData?.id}`, data),
+    onSuccess: () => {
+      form.reset();
+      router.push("/invoices");
+      router.refresh(); // Refresh to show updated data
+    },
+    onError: (error) => {
+      console.error(`Failed to ${mode} invoices:`, error);
+    },
+  });
 
-    const { mutate, isPending } = useMutation({
-      mutationFn: (data: z.infer<typeof formSchema>) =>
-        mode === "create" 
-          ? post("/invoices", data)
-          : put(`/invoices/${initialData?.id}`, data),
-      onSuccess: () => {
-        form.reset();
-        router.push("/invoices");
-        router.refresh(); // Refresh to show updated data
-      },
-      onError: (error) => {
-        console.error(`Failed to ${mode} invoices:`, error);
-      },
-    });
+  const [total, setTotal] = useState(0);
+
+  function calculateTotal(products: any[]) {
+    console.log(products);
+    const totalAmount = products.reduce((sum, product) => {
+      return sum + (Number(product.price) || 0);
+    }, 0);
+    setTotal(totalAmount);
+  }
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate(values);
+    mutate({ ...values, total_amount: total } as any);
   };
 
   // type Customer = {
@@ -196,7 +205,7 @@ export function InvoiceForm({
               {/* Customer Name */}
               <FormField
                 control={form.control}
-                name="customer_name"
+                name="customer_id"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
                     <FormLabel className="text-base font-medium flex items-center gap-2">
@@ -204,12 +213,12 @@ export function InvoiceForm({
                       Customer Name
                     </FormLabel>
                     <Select
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    value={field.value?.toString()}
-                    //  onValueChange={field.onChange}
-                    //   value={field.value?.toString() || ""}
-                    //  onValueChange={(value) => field.onChange(Number(value))}
-                    //   value={field.value?.toString()}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                      value={field.value?.toString()}
+                      //  onValueChange={field.onChange}
+                      //   value={field.value?.toString() || ""}
+                      //  onValueChange={(value) => field.onChange(Number(value))}
+                      //   value={field.value?.toString()}
                       // onValueChange={field.onChange}
                       // defaultValue={field.value}
                     >
@@ -246,23 +255,21 @@ export function InvoiceForm({
                       Product Details
                     </FormLabel>
                     <FormControl>
-
-                    <MultiSelect
-                      options={(products as any)?.map((product: any) => ({
-                        value: JSON.stringify({
-                          id: product.id,
-                          name: product.name,
-                          price: product.price,
-                        }),
+                      <MultiSelect
+                        options={(products as any)?.map((product: any) => ({
+                          value: product.id,
                           label: `${product.id} - ${product.name} - Rs ${product.price}`,
-                      }))}
-                      onValueChange={(values: string[]) =>
-                        field.onChange(values.map((val) => JSON.parse(val)))
-                      }
-                      placeholder="Select products"
-
-
-                      /* <MultiSelect
+                        }))}
+                        onValueChange={(values) => {
+                          console.log("Selected values:", values);
+                          let prod = (products as any)?.filter(
+                            (product: any) => values.includes(product.id)
+                          ).map((e:any)=>({id: e.id, name: e.name, price: e.price}));
+                          calculateTotal(prod);
+                          field.onChange(prod);
+                        }}
+                        placeholder="Select products"
+                        /* <MultiSelect
                         options={(products as any)?.map((product: any) => ({
                           value: product.name,
                           label: product.name,
@@ -344,7 +351,7 @@ export function InvoiceForm({
                   </FormItem>
                 )}
               />
-
+              <h1 className="text-4xl">{total}</h1>
               <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-end">
                 <Button
                   isLoading={isPending}

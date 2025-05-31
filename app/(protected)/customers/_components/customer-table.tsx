@@ -45,6 +45,7 @@ export function useDeleteCustomer() {
 }
 
 export function CustomerTable({ data }: { data: Customer[] }) {
+  console.log("data", data);
   const router = useRouter();
   const { mutate: deleteCustomer, isPending } = useDeleteCustomer();
 

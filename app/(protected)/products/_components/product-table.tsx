@@ -44,6 +44,7 @@ export function useDeleteProduct() {
 }
 
 export function ProductTable({ data }: { data: Product[] }) {
+   console.log("data", data);
   const router = useRouter();
   const { mutate: deleteProduct, isPending } = useDeleteProduct();
 
