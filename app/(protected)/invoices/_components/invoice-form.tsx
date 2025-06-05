@@ -39,31 +39,8 @@ import { Badge } from "@/components/ui/badge";
 import { post, put, get } from "@/client/api-client";
 import { useStore } from "@/app/hooks/usestore";
 
-// const frameworksList = [
-//   {
-//     value: "next.js",
-//     label: "Next.js",
-//   },
-//   {
-//     value: "sveltekit",
-//     label: "SvelteKit",
-//   },
-//   {
-//     value: "nuxt.js",
-//     label: "Nuxt.js",
-//   },
-//   {
-//     value: "remix",
-//     label: "Remix",
-//   },
-//   {
-//     value: "astro",
-//     label: "Astro",
-//   },
-// ];
-
 const formSchema = z.object({
-  customer_id: z.coerce.number().min(1, { message: "Customer is required" }),
+  customer_id: z.number().min(1, { message: "Customer is required" }),
 
   // customer_id: z.string().min(2, { message: "Customer name is required" }),
   product_details: z.any().refine((val) => val.length > 0, {
@@ -108,43 +85,16 @@ export function InvoiceForm({
     },
   });
 
-  // useEffect(() => {
-  //   if (mode === "edit" && initialData) {
-  //     form.reset(initialData);
-  //   }
-  // }, [mode, initialData, form]);
-
-  // const { mutate, isPending } = useMutation({
-  //   mutationFn: async (data: z.infer<typeof formSchema>) => {
-
-  //     try {
-  //       if (mode === "create") {
-  //         return await post("/invoices", data);
-  //       } else {
-  //         return await put(`/invoices/${initialData?.id}`, data);
-  //       }
-  //     } catch (error) {
-  //       console.error(`Failed to ${mode} invoice:`, error);
-  //       throw error;
-  //     }
-  //   },
-  //   onSuccess: () => {
-  //     form.reset();
-  //     router.push("/invoices");
-  //     router.refresh();
-  //   },
-  //   onError: (error) => {
-  //     console.error(`Failed to ${mode} invoice:`, error);
-  //   },
-  // });
-
-  // Set form values when in edit mode
   useEffect(() => {
     if (mode === "edit" && initialData) {
-      form.reset({
-        product_details: initialData.product_details,
-        status: initialData.status,
-      });
+      form.setValue("customer_id", initialData.customer_id);
+      form.setValue(
+        "product_details",
+        initialData.product_details,
+      );
+      form.setValue("status", initialData.status);
+      setTotal(initialData.total_amount || 0);
+      console.log("data --->", initialData, form.getValues());
     }
   }, [mode, initialData, form]);
 
@@ -174,7 +124,7 @@ export function InvoiceForm({
   }
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate({ ...values, total_amount: total } as any);
+    mutate({ ...values, total_amount: total } as any); 
   };
 
   // type Customer = {
@@ -214,7 +164,7 @@ export function InvoiceForm({
                     </FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
-                      value={field.value?.toString()}
+                      value={field.value as any}
                       //  onValueChange={field.onChange}
                       //   value={field.value?.toString() || ""}
                       //  onValueChange={(value) => field.onChange(Number(value))}
@@ -222,7 +172,7 @@ export function InvoiceForm({
                       // onValueChange={field.onChange}
                       // defaultValue={field.value}
                     >
-                      <FormControl>
+                      <FormControl {...field}>
                         <SelectTrigger className="w-full h-12 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
@@ -231,7 +181,7 @@ export function InvoiceForm({
                         {customers?.map((customer: any) => (
                           <SelectItem
                             key={customer.id}
-                            value={customer.id.toString()}
+                            value={customer.id}
                             className="py-3 cursor-pointer"
                           >
                             {customer.name}
@@ -254,31 +204,32 @@ export function InvoiceForm({
                       <Package className="h-4 w-4" />
                       Product Details
                     </FormLabel>
-                    <FormControl>
+                    <FormControl {...field}>
                       <MultiSelect
+                        defaultValue={field.value?.map((e: any) => e.id) || []}
                         options={(products as any)?.map((product: any) => ({
                           value: product.id,
                           label: `${product.id} - ${product.name} - Rs ${product.price}`,
                         }))}
                         onValueChange={(values) => {
                           console.log("Selected values:", values);
-                          let prod = (products as any)?.filter(
-                            (product: any) => values.includes(product.id)
-                          ).map((e:any)=>({id: e.id, name: e.name, price: e.price}));
+                          let prod = (products as any)
+                            ?.filter((product: any) =>
+                              values.includes(product.id)
+                            )
+                            .map((e: any) => ({
+                              id: e.id,
+                              name: e.name,
+                              price: e.price,
+                            }));
                           calculateTotal(prod);
                           field.onChange(prod);
                         }}
                         placeholder="Select products"
-                        /* <MultiSelect
-                        options={(products as any)?.map((product: any) => ({
-                          value: product.name,
-                          label: product.name,
-                        }))}
-                        onValueChange={field.onChange}
-                        placeholder="Select products" */
+             
                         variant="inverted"
                         animation={2}
-                        maxCount={3}
+                        
                         className="h-12 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary/20"
                       />
                     </FormControl>
@@ -297,7 +248,7 @@ export function InvoiceForm({
                       <AlertCircle className="h-4 w-4" />
                       Invoice Status
                     </FormLabel>
-                    <FormControl>
+                    <FormControl {...field}>
                       <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}

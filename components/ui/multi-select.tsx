@@ -187,6 +187,7 @@ export const MultiSelect = React.forwardRef<
         onValueChange(allValues);
       }
     };
+    console.log('defaultValue', options,selectedValues);
 
     return (
       <Popover
