@@ -70,6 +70,7 @@ export const apiClient = async <T>(
   try {
     const interceptedConfig = requestInterceptor(config);
     const response = await fetch(`${BASE_URL}${endpoint}`, interceptedConfig);
+    console.log(`Request to ${BASE_URL}${endpoint} with config:`, interceptedConfig);
 
     return await responseInterceptor<T>(response);
   } catch (error) {

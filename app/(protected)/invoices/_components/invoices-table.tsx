@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { del } from "@/client/api-client";
@@ -19,6 +19,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { DeleteIcon, EditIcon, Trash2 } from "lucide-react";
 
 interface Invoice {
   id: number;
@@ -116,18 +119,24 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => router.push(`/invoices/${item.id}`)}
+                      <Link
+                      className={
+                        cn(
+                          buttonVariants({ variant: "success" , size: "icon" }),
+                        )
+                      }
+                        href={`/invoices/${item.id}`}
+                    
                       >
-                        Edit
-                      </Button>
+                        <EditIcon className="h-4 w-4" /> 
+                      </Link>
                       <Button
-                        variant="outline"
+                        variant="destructive"
+                        size="icon"
                         onClick={() => deleteInvoice(item.id)}
-                        disabled={isPending}
+                        
                       >
-                        {isPending ? "Deleting..." : "Delete"}
+                        <Trash2 className="h-4 w-4 text-white" />
                       </Button>
                     </div>
                   </TableCell>

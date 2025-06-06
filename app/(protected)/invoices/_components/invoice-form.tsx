@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MultiSelect } from "@/components/ui/multi-select";
+import MultipleSelector from "@/components/ui/multi-select";
 import { Icons } from "@/components/ui/icons";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,7 @@ export function InvoiceForm({
 }: InvoiceFormProps) {
   const router = useRouter();
   const { customers } = useStore();
+  
 
   const { data: products = [], isPending: loading } = useQuery({
     queryKey: ["products"],
@@ -79,24 +80,20 @@ export function InvoiceForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customer_id: 0,
-      product_details: [],
-      status: "",
+      customer_id: initialData?.customer_id,
     },
+
   });
 
   useEffect(() => {
     if (mode === "edit" && initialData) {
+
       form.setValue("customer_id", initialData.customer_id);
-      form.setValue(
-        "product_details",
-        initialData.product_details,
-      );
+      form.setValue("product_details", initialData.product_details);
       form.setValue("status", initialData.status);
       setTotal(initialData.total_amount || 0);
-      console.log("data --->", initialData, form.getValues());
     }
-  }, [mode, initialData, form]);
+  }, [mode, customers, initialData, form]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: z.infer<typeof formSchema>) =>
@@ -116,7 +113,6 @@ export function InvoiceForm({
   const [total, setTotal] = useState(0);
 
   function calculateTotal(products: any[]) {
-    console.log(products);
     const totalAmount = products.reduce((sum, product) => {
       return sum + (Number(product.price) || 0);
     }, 0);
@@ -124,7 +120,7 @@ export function InvoiceForm({
   }
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate({ ...values, total_amount: total } as any); 
+    mutate({ ...values, total_amount: total } as any);
   };
 
   // type Customer = {
@@ -163,18 +159,15 @@ export function InvoiceForm({
                       Customer Name
                     </FormLabel>
                     <Select
-                      onValueChange={(value) => field.onChange(Number(value))}
+                      onValueChange={(value) => {
+                        field.onChange(Number(value))
+                      }}
+                    
                       value={field.value as any}
-                      //  onValueChange={field.onChange}
-                      //   value={field.value?.toString() || ""}
-                      //  onValueChange={(value) => field.onChange(Number(value))}
-                      //   value={field.value?.toString()}
-                      // onValueChange={field.onChange}
-                      // defaultValue={field.value}
                     >
                       <FormControl {...field}>
                         <SelectTrigger className="w-full h-12 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary/20">
-                          <SelectValue placeholder="Select customer" />
+                          <SelectValue placeholder="Select customer"  />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="max-h-80">
@@ -204,18 +197,25 @@ export function InvoiceForm({
                       <Package className="h-4 w-4" />
                       Product Details
                     </FormLabel>
-                    <FormControl {...field}>
-                      <MultiSelect
-                        defaultValue={field.value?.map((e: any) => e.id) || []}
-                        options={(products as any)?.map((product: any) => ({
-                          value: product.id,
-                          label: `${product.id} - ${product.name} - Rs ${product.price}`,
-                        }))}
-                        onValueChange={(values) => {
-                          console.log("Selected values:", values);
+                    <FormControl>
+                      <MultipleSelector
+                      options={(products as any)?.map(
+                          (product: any) => ({
+                            value: product.id,
+                            label: `${product.id} - ${product.name} - Rs ${product.price}`,
+                          })
+                        ) || []}
+                        value={field.value?.map(
+                          (product: any) => ({
+                            value: product.id,
+                            label: `${product.id} - ${product.name} - Rs ${product.price}`,
+                          })
+                        ) || []}
+                        onChange={(values) => {
+                          console.log(values,'asdasd');
                           let prod = (products as any)
                             ?.filter((product: any) =>
-                              values.includes(product.id)
+                              values.some(f=> f.value == product.id)
                             )
                             .map((e: any) => ({
                               id: e.id,
@@ -225,13 +225,14 @@ export function InvoiceForm({
                           calculateTotal(prod);
                           field.onChange(prod);
                         }}
-                        placeholder="Select products"
-             
-                        variant="inverted"
-                        animation={2}
-                        
-                        className="h-12 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary/20"
+                        placeholder="Select frameworks you like..."
+                        emptyIndicator={
+                          <p className="text-center text-lg leading-10 text-gray-600 dark:text-gray-400">
+                            no results found.
+                          </p>
+                        }
                       />
+                    
                     </FormControl>
                     <FormMessage />
                   </FormItem>
