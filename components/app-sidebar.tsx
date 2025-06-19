@@ -52,7 +52,7 @@ const data: MenuItem[] = [
     url: "/products",
   },
   {
-    title: "invoices",
+    title: "Invoices",
     url: "/invoices",
   },
 ];

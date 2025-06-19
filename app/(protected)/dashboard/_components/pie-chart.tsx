@@ -18,6 +18,9 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+
+export const description = "A donut chart with text"
+
 const chartData = [
   { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
   { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
@@ -27,30 +30,30 @@ const chartData = [
 ]
 
 const chartConfig = {
-    visitors: {
-      label: "Visitors",
-    },
-    chrome: {
-      label: "Chrome",
-      color: "#ff0000",
-    },
-    safari: {
-      label: "Safari",
-      color: "--chart-2))",
-    },
-    firefox: {
-      label: "Firefox",
-      color: "--chart-3))",
-    },
-    edge: {
-      label: "Edge",
-      color: "--chart-4))",
-    },
-    other: {
-      label: "Other",
-      color: "--chart-5))",
-    },
-  } satisfies ChartConfig
+  visitors: {
+    label: "Visitors",
+  },
+  chrome: {
+    label: "Chrome",
+    color: "var(--chart-1)",
+  },
+  safari: {
+    label: "Safari",
+    color: "var(--chart-2)",
+  },
+  firefox: {
+    label: "Firefox",
+    color: "var(--chart-3)",
+  },
+  edge: {
+    label: "Edge",
+    color: "var(--chart-4)",
+  },
+  other: {
+    label: "Other",
+    color: "var(--chart-5)",
+  },
+} satisfies ChartConfig
 
 export function CustomerChart() {
   const totalVisitors = React.useMemo(() => {
@@ -114,15 +117,14 @@ export function CustomerChart() {
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 font-medium leading-none">
+        <div className="flex items-center gap-2 leading-none font-medium">
           Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
         </div>
-        <div className="leading-none text-muted-foreground">
+        <div className="text-muted-foreground leading-none">
           Showing total visitors for the last 6 months
         </div>
       </CardFooter>
     </Card>
   )
 }
-
 export default CustomerChart

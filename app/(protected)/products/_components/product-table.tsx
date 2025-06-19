@@ -7,10 +7,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { del } from "@/client/api-client";
+import { DeleteIcon, EditIcon, Trash2 } from "lucide-react";
+import { ChevronDownIcon } from "@radix-ui/react-icons";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface Product {
   id: number;
@@ -56,8 +60,8 @@ export function ProductTable({ data }: { data: Product[] }) {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <Button variant="outline" onClick={() => router.push("/products/create")}>
-          Create
+        <Button variant="primary" onClick={() => router.push("/products/create")}>
+          Create Product
         </Button>
       </div>
 
@@ -81,13 +85,27 @@ export function ProductTable({ data }: { data: Product[] }) {
               <TableCell>{item.price}</TableCell>
               <TableCell>
                 <div className="flex justify-start gap-2">
-                  <Button variant="outline" onClick={() => handleEdit(item.id)}>
-                    Edit
-                  </Button>
 
-                  <Button variant="outline" onClick={() => deleteProduct(item.id)}>
-                    {isPending ? 'Deleting...' : 'Delete'}
-                  </Button>
+                   <Link
+                      className={
+                        cn(
+                          buttonVariants({ variant: "success" , size: "icon" }),
+                        )
+                      }
+                        href={`/products/${item.id}`}
+                    
+                      >
+                        <EditIcon className="h-4 w-4" /> 
+                    </Link>
+
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => deleteProduct(item.id)}
+                      
+                    >
+                      <Trash2 className="h-4 w-4 text-white" />
+                    </Button>
 
                 </div>
               </TableCell>

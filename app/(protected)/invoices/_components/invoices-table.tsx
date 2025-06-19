@@ -69,7 +69,7 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
     <div>
       <div className="flex justify-end mb-4">
         <Button
-          variant="outline"
+          variant="primary"
           onClick={() => router.push("/invoices/create")}
         >
           Create Invoice

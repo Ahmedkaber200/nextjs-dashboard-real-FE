@@ -7,10 +7,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { del } from "@/client/api-client";
+import { DeleteIcon, EditIcon, Trash2 } from "lucide-react";
+import { ChevronDownIcon } from "@radix-ui/react-icons";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface Customer {
   id: number;
@@ -57,8 +61,8 @@ export function CustomerTable({ data }: { data: Customer[] }) {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <Button variant="outline" onClick={() => router.push("/customers/create")}>
-          Create
+        <Button variant="primary" onClick={() => router.push("/customers/create")}>
+          Create Customer
         </Button>
       </div>
 
@@ -84,12 +88,26 @@ export function CustomerTable({ data }: { data: Customer[] }) {
               <TableCell>{item.address}</TableCell>
               <TableCell>
                 <div className="flex justify-start gap-2">
-                  <Button variant="outline" onClick={() => handleEdit(item.id)}>
-                    Edit
-                  </Button>
 
-                  <Button variant="outline" onClick={() => deleteCustomer(item.id)}>
-                    {isPending ? 'Deleting...' : 'Delete'}
+                 <Link
+                    className={
+                      cn(
+                        buttonVariants({ variant: "success" , size: "icon" }),
+                      )
+                    }
+                      href={`/customers/${item.id}`}
+                  
+                    >
+                      <EditIcon className="h-4 w-4" /> 
+                  </Link>
+
+                  <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => deleteCustomer(item.id)}
+                      
+                    >
+                      <Trash2 className="h-4 w-4 text-white" />
                   </Button>
 
                 </div>

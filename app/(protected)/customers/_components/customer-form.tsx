@@ -115,7 +115,7 @@ export function CustomerForm({ mode = "create", initialData }: CustomerFormProps
                       placeholder="Enter email" 
                       {...field} 
                       type="email"
-                      disabled={mode === "edit"} // Disable email in edit mode
+                      // disabled={mode === "edit"} // Disable email in edit mode
                     />
                   </FormControl>
                   <FormMessage />
