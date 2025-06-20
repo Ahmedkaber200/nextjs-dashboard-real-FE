@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
 import { post, put } from "@/client/api-client";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name is required" }),
@@ -37,6 +38,7 @@ type CustomerFormProps = {
 };
 
 export function CustomerForm({ mode = "create", initialData }: CustomerFormProps) {
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const router = useRouter();
   console.log(initialData)
   const form = useForm<z.infer<typeof formSchema>>({
@@ -76,9 +78,23 @@ export function CustomerForm({ mode = "create", initialData }: CustomerFormProps
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate(values);
-  };
+const onSubmit = (values: z.infer<typeof formSchema>) => {
+  setIsButtonDisabled(true);
+  
+  mutate(values, {
+    onSuccess: () => {
+      router.push("/customers");
+    },
+    onError: (error) => {
+      console.error(`Failed to ${mode} customer:`, error);
+      setIsButtonDisabled(false);
+    },
+  });
+};
+
+  // const onSubmit = (values: z.infer<typeof formSchema>) => {
+  //   mutate(values);
+  // };
 
   return (
     <Card className="w-full">
@@ -153,11 +169,11 @@ export function CustomerForm({ mode = "create", initialData }: CustomerFormProps
 
             <div className="flex gap-4">
               <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isPending}
-              >
-                {isPending ? "Submitting..." : "Submit"}
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isPending || isButtonDisabled}
+                >
+                  {(isPending || isButtonDisabled) ? "Submitting..." : "Submit"}
               </Button>
               
               <Button

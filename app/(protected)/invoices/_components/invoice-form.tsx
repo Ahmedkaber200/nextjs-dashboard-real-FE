@@ -71,6 +71,7 @@ export function InvoiceForm({
 }: InvoiceFormProps) {
   const router = useRouter();
   const { customers } = useStore();
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   
 
   const { data: products = [], isPending: loading } = useQuery({
@@ -120,14 +121,26 @@ export function InvoiceForm({
     setTotal(totalAmount);
   }
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate({ ...values, total_amount: total } as any);
+
+
+const onSubmit = (values: z.infer<typeof formSchema>) => {
+  setIsButtonDisabled(true);
+
+  const payload = {
+    ...values,
+    total_amount: total,
   };
 
-  // type Customer = {
-  //   id: number;
-  //   name: string;
-  // };
+  mutate(payload, {
+    onSuccess: () => {
+      router.push("/invoices");
+    },
+    onError: (error) => {
+      console.error(`Failed to ${mode} customer:`, error);
+      setIsButtonDisabled(false);
+    },
+  });
+};
 
   return (
     <div className="w-full ">
@@ -233,7 +246,6 @@ export function InvoiceForm({
                           </p>
                         }
                       />
-                    
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -307,7 +319,7 @@ export function InvoiceForm({
               <h1 className="text-4xl">{total}</h1>
               <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-end">
                 <Button
-                  isLoading={isPending}
+                  isLoading={isPending || isButtonDisabled}
                   type="submit"
                   className="w-36 h-12 text-base font-medium rounded-lg transition-all shadow-md hover:shadow-lg"
                 >

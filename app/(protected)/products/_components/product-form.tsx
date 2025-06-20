@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
 import { post, put } from "@/client/api-client";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // ✅ New Product Form Schema
 const formSchema = z.object({
@@ -36,6 +36,7 @@ type ProductFormProps = {
 };
 
 export function ProductForm({ mode = "create", initialData }: ProductFormProps) {
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -72,9 +73,19 @@ export function ProductForm({ mode = "create", initialData }: ProductFormProps) 
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutate(values);
-  };
+const onSubmit = (values: z.infer<typeof formSchema>) => {
+  setIsButtonDisabled(true);
+  
+  mutate(values, {
+    onSuccess: () => {
+      router.push("/products");
+    },
+    onError: (error) => {
+      console.error(`Failed to ${mode} customer:`, error);
+      setIsButtonDisabled(false);
+    },
+  });
+};
 
   return (
     <Card className="w-full">
@@ -129,12 +140,12 @@ export function ProductForm({ mode = "create", initialData }: ProductFormProps) 
             />
 
             <div className="flex gap-4">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isPending}
-              >
-                {isPending ? "Submitting..." : "Submit"}
+              <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isPending || isButtonDisabled}
+                >
+                  {(isPending || isButtonDisabled) ? "Submitting..." : "Submit"}
               </Button>
 
               <Button
