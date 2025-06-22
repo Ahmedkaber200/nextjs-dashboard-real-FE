@@ -40,14 +40,24 @@ import { post, put, get } from "@/client/api-client";
 import { useStore } from "@/app/hooks/usestore";
 
 const formSchema = z.object({
-  customer_id: z.number().min(1, { message: "Customer is required" }),
+  customer_id: z.number({
+    required_error: "Customer is required",
+    invalid_type_error: "Customer is required",
+  }).min(1, { message: "Customer is required" }),
 
-  // customer_id: z.string().min(2, { message: "Customer name is required" }),
-  product_details: z.any().refine((val) => val.length > 0, {
-    message: "At least one product is required",
-  }),
+  product_details: z
+    .array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+        price: z.number(),
+      })
+    )
+    .min(1, { message: "At least one product is required" }),
+
   status: z.string().min(1, { message: "Status is required" }),
 });
+
 
 type InvoiceFormProps = {
   mode?: "create" | "edit";
@@ -73,17 +83,26 @@ export function InvoiceForm({
   const { customers } = useStore();
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   
-
   const { data: products = [], isPending: loading } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => get("/products"),
-  });
+  queryKey: ["products"],
+  queryFn: () => get("/products"),
+});
+
+  // const { data: products = [], isPending: loading } = useQuery({
+  //   queryKey: ["products"],
+  //   queryFn: () => get("/products"),
+  // });
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customer_id: initialData?.customer_id,
-    },
+      customer_id: initialData?.customer_id ?? 0,
+      product_details: initialData?.product_details ?? [],
+      status: initialData?.status ?? "",
+},
+    // defaultValues: {
+    //   customer_id: initialData?.customer_id,
+    // },
 
   });
 
@@ -120,8 +139,6 @@ export function InvoiceForm({
     }, 0);
     setTotal(totalAmount);
   }
-
-
 
 const onSubmit = (values: z.infer<typeof formSchema>) => {
   setIsButtonDisabled(true);
@@ -179,7 +196,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                     
                       value={field.value as any}
                     >
-                      <FormControl {...field}>
+                      <FormControl>
                         <SelectTrigger className="w-full h-12 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="Select customer"  />
                         </SelectTrigger>
@@ -200,6 +217,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                   </FormItem>
                 )}
               />
+
 
               {/* Product Details */}
               <FormField
@@ -234,7 +252,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                             .map((e: any) => ({
                               id: e.id,
                               name: e.name,
-                              price: e.price,
+                              price: Number(e.price),
                             }));
                           calculateTotal(prod);
                           field.onChange(prod);
@@ -262,7 +280,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                       <AlertCircle className="h-4 w-4" />
                       Invoice Status
                     </FormLabel>
-                    <FormControl {...field}>
+                    <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -323,6 +341,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                   type="submit"
                   className="w-36 h-12 text-base font-medium rounded-lg transition-all shadow-md hover:shadow-lg"
                 >
+                  
                   {mode === "create" ? "Create Invoice" : "Update Invoice"}
                 </Button>
                 <Button
