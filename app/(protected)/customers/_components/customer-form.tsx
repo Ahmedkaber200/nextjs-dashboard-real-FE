@@ -13,16 +13,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMutation } from "@tanstack/react-query";
-import { post, put } from "@/client/api-client";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { post, put, get } from "@/client/api-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
+import { toast } from "sonner";
+import { useParams } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name is required" }),
   email: z.string().email({ message: "Invalid email address" }),
-  contact: z.string().min(10, { message: "Contact must be at least 10 digits" }),
+  contact: z
+    .string()
+    .min(10, { message: "Contact must be at least 10 digits" }),
   address: z.string().min(5, { message: "Address is required" }),
 });
 
@@ -37,10 +40,21 @@ type CustomerFormProps = {
   };
 };
 
-export function CustomerForm({ mode = "create", initialData }: CustomerFormProps) {
+export function CustomerForm({
+  mode = "create",
+  initialData,
+}: CustomerFormProps) {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const { id } = useParams();
+
+  const { data: customerData, isLoading } = useQuery({
+    queryKey: ["customer", id],
+    queryFn: () => get(`/customers/${id}`),
+    enabled: mode === "edit",
+  });
+
   const router = useRouter();
-  console.log(initialData)
+  console.log(initialData);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -65,32 +79,38 @@ export function CustomerForm({ mode = "create", initialData }: CustomerFormProps
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: z.infer<typeof formSchema>) =>
-      mode === "create" 
+      mode === "create"
         ? post("/customers", data)
         : put(`/customers/${initialData?.id}`, data),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
+      const successMessage =
+        mode === "create"
+          ? response?.message || "Customer created successfully!"
+          : response?.message || "Customer updated successfully!";
+
+      toast.success(successMessage, {
+        duration: 7000, // 🕒 7 seconds
+      });
+
       form.reset();
       router.push("/customers");
-      router.refresh(); // Refresh to show updated data
-    },
-    onError: (error) => {
-      console.error(`Failed to ${mode} customer:`, error);
+      router.refresh();
     },
   });
 
-const onSubmit = (values: z.infer<typeof formSchema>) => {
-  setIsButtonDisabled(true);
-  
-  mutate(values, {
-    onSuccess: () => {
-      router.push("/customers");
-    },
-    onError: (error) => {
-      console.error(`Failed to ${mode} customer:`, error);
-      setIsButtonDisabled(false);
-    },
-  });
-};
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setIsButtonDisabled(true);
+
+    mutate(values, {
+      onSuccess: () => {
+        router.push("/customers");
+      },
+      onError: (error) => {
+        console.error(`Failed to ${mode} customer:`, error);
+        setIsButtonDisabled(false);
+      },
+    });
+  };
 
   // const onSubmit = (values: z.infer<typeof formSchema>) => {
   //   mutate(values);
@@ -119,7 +139,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="email"
@@ -127,9 +147,9 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter email" 
-                      {...field} 
+                    <Input
+                      placeholder="Enter email"
+                      {...field}
                       type="email"
                       // disabled={mode === "edit"} // Disable email in edit mode
                     />
@@ -138,7 +158,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="contact"
@@ -152,7 +172,7 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="address"
@@ -168,14 +188,14 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
             />
 
             <div className="flex gap-4">
-              <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isPending || isButtonDisabled}
-                >
-                  {(isPending || isButtonDisabled) ? "Submitting..." : "Submit"}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isPending || isButtonDisabled}
+              >
+                {isPending || isButtonDisabled ? "Submitting..." : "Submit"}
               </Button>
-              
+
               <Button
                 type="button"
                 variant="outline"

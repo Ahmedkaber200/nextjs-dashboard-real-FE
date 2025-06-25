@@ -38,12 +38,16 @@ import { Badge } from "@/components/ui/badge";
 // Import API client from the correct location
 import { post, put, get } from "@/client/api-client";
 import { useStore } from "@/app/hooks/usestore";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
 
 const formSchema = z.object({
-  customer_id: z.number({
-    required_error: "Customer is required",
-    invalid_type_error: "Customer is required",
-  }).min(1, { message: "Customer is required" }),
+  customer_id: z
+    .number({
+      required_error: "Customer is required",
+      invalid_type_error: "Customer is required",
+    })
+    .min(1, { message: "Customer is required" }),
 
   product_details: z
     .array(
@@ -57,7 +61,6 @@ const formSchema = z.object({
 
   status: z.string().min(1, { message: "Status is required" }),
 });
-
 
 type InvoiceFormProps = {
   mode?: "create" | "edit";
@@ -82,33 +85,38 @@ export function InvoiceForm({
   const router = useRouter();
   const { customers } = useStore();
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
-  
+  const { id } = useParams();
+
   const { data: products = [], isPending: loading } = useQuery({
-  queryKey: ["products"],
-  queryFn: () => get("/products"),
-});
+    queryKey: ["products"],
+    queryFn: () => get("/products"),
+  });
+
+  const { data: invoicetData, isLoading } = useQuery({
+    queryKey: ["invoice", id],
+    queryFn: () => get(`/invoices/${id}`),
+    enabled: mode === "edit",
+  });
 
   // const { data: products = [], isPending: loading } = useQuery({
   //   queryKey: ["products"],
   //   queryFn: () => get("/products"),
   // });
-  
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       customer_id: initialData?.customer_id ?? 0,
       product_details: initialData?.product_details ?? [],
       status: initialData?.status ?? "",
-},
+    },
     // defaultValues: {
     //   customer_id: initialData?.customer_id,
     // },
-
   });
 
   useEffect(() => {
     if (mode === "edit" && initialData) {
-
       form.setValue("customer_id", initialData.customer_id);
       form.setValue("product_details", initialData.product_details);
       form.setValue("status", initialData.status);
@@ -121,11 +129,25 @@ export function InvoiceForm({
       mode === "create"
         ? post("/invoices", data)
         : put(`/invoices/${initialData?.id}`, data),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
+      const successMessage =
+        mode === "create"
+          ? response?.message || "Invoice created successfully!"
+          : response?.message || "Invoice updated successfully!";
+
+      toast.success(successMessage, {
+        duration: 5000, // 🕒 5 seconds
+      });
+
       form.reset();
-      router.push("/invoices");
-      router.refresh(); // Refresh to show updated data
+      router.push("/customers");
+      router.refresh();
     },
+    // onSuccess: () => {
+    //   form.reset();
+    //   router.push("/invoices");
+    //   router.refresh(); // Refresh to show updated data
+    // },
     onError: (error) => {
       console.error(`Failed to ${mode} invoices:`, error);
     },
@@ -140,24 +162,24 @@ export function InvoiceForm({
     setTotal(totalAmount);
   }
 
-const onSubmit = (values: z.infer<typeof formSchema>) => {
-  setIsButtonDisabled(true);
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setIsButtonDisabled(true);
 
-  const payload = {
-    ...values,
-    total_amount: total,
+    const payload = {
+      ...values,
+      total_amount: total,
+    };
+
+    mutate(payload, {
+      onSuccess: () => {
+        router.push("/invoices");
+      },
+      onError: (error) => {
+        console.error(`Failed to ${mode} customer:`, error);
+        setIsButtonDisabled(false);
+      },
+    });
   };
-
-  mutate(payload, {
-    onSuccess: () => {
-      router.push("/invoices");
-    },
-    onError: (error) => {
-      console.error(`Failed to ${mode} customer:`, error);
-      setIsButtonDisabled(false);
-    },
-  });
-};
 
   return (
     <div className="w-full ">
@@ -191,14 +213,13 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                     </FormLabel>
                     <Select
                       onValueChange={(value) => {
-                        field.onChange(Number(value))
+                        field.onChange(Number(value));
                       }}
-                    
                       value={field.value as any}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full h-12 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary/20">
-                          <SelectValue placeholder="Select customer"  />
+                          <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="max-h-80">
@@ -218,7 +239,6 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                 )}
               />
 
-
               {/* Product Details */}
               <FormField
                 control={form.control}
@@ -231,23 +251,23 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                     </FormLabel>
                     <FormControl>
                       <MultipleSelector
-                      options={(products as any)?.map(
-                          (product: any) => ({
+                        options={
+                          (products as any)?.map((product: any) => ({
                             value: product.id,
                             label: `${product.id} - ${product.name} - Rs ${product.price}`,
-                          })
-                        ) || []}
-                        value={field.value?.map(
-                          (product: any) => ({
+                          })) || []
+                        }
+                        value={
+                          field.value?.map((product: any) => ({
                             value: product.id,
                             label: `${product.id} - ${product.name} - Rs ${product.price}`,
-                          })
-                        ) || []}
+                          })) || []
+                        }
                         onChange={(values) => {
-                          console.log(values,'asdasd');
+                          console.log(values, "asdasd");
                           let prod = (products as any)
                             ?.filter((product: any) =>
-                              values.some(f=> f.value == product.id)
+                              values.some((f) => f.value == product.id)
                             )
                             .map((e: any) => ({
                               id: e.id,
@@ -341,7 +361,6 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                   type="submit"
                   className="w-36 h-12 text-base font-medium rounded-lg transition-all shadow-md hover:shadow-lg"
                 >
-                  
                   {mode === "create" ? "Create Invoice" : "Update Invoice"}
                 </Button>
                 <Button

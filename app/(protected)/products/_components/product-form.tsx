@@ -13,16 +13,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMutation } from "@tanstack/react-query";
-import { post, put } from "@/client/api-client";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { post, put, get } from "@/client/api-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { toast } from "sonner";
 
 // ✅ New Product Form Schema
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name is required" }),
   description: z.string().min(5, { message: "Description is required" }),
-  price: z.coerce.number().positive({ message: "Price must be a positive number" }),
+  price: z.coerce
+    .number()
+    .positive({ message: "Price must be a positive number" }),
 });
 
 type ProductFormProps = {
@@ -35,9 +39,19 @@ type ProductFormProps = {
   };
 };
 
-export function ProductForm({ mode = "create", initialData }: ProductFormProps) {
+export function ProductForm({
+  mode = "create",
+  initialData,
+}: ProductFormProps) {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const { id } = useParams();
   const router = useRouter();
+
+  const { data: customerData, isLoading } = useQuery({
+    queryKey: ["product", id],
+    queryFn: () => get(`/products/${id}`),
+    enabled: mode === "edit",
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,9 +77,19 @@ export function ProductForm({ mode = "create", initialData }: ProductFormProps) 
       mode === "create"
         ? post("/products", data)
         : put(`/products/${initialData?.id}`, data),
-    onSuccess: () => {
+
+    onSuccess: (response: any) => {
+      const successMessage =
+        mode === "create"
+          ? response?.message || "Product created successfully!"
+          : response?.message || "Product updated successfully!";
+
+      toast.success(successMessage, {
+        duration: 5000, // 🕒 5 seconds
+      });
+
       form.reset();
-      router.push("/products");
+      router.push("/customers");
       router.refresh();
     },
     onError: (error) => {
@@ -73,19 +97,19 @@ export function ProductForm({ mode = "create", initialData }: ProductFormProps) 
     },
   });
 
-const onSubmit = (values: z.infer<typeof formSchema>) => {
-  setIsButtonDisabled(true);
-  
-  mutate(values, {
-    onSuccess: () => {
-      router.push("/products");
-    },
-    onError: (error) => {
-      console.error(`Failed to ${mode} customer:`, error);
-      setIsButtonDisabled(false);
-    },
-  });
-};
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setIsButtonDisabled(true);
+
+    mutate(values, {
+      onSuccess: () => {
+        router.push("/products");
+      },
+      onError: (error) => {
+        console.error(`Failed to ${mode} customer:`, error);
+        setIsButtonDisabled(false);
+      },
+    });
+  };
 
   return (
     <Card className="w-full">
@@ -132,7 +156,11 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
                 <FormItem>
                   <FormLabel>Price</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter product price" type="number" {...field} />
+                    <Input
+                      placeholder="Enter product price"
+                      type="number"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,12 +168,12 @@ const onSubmit = (values: z.infer<typeof formSchema>) => {
             />
 
             <div className="flex gap-4">
-              <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isPending || isButtonDisabled}
-                >
-                  {(isPending || isButtonDisabled) ? "Submitting..." : "Submit"}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isPending || isButtonDisabled}
+              >
+                {isPending || isButtonDisabled ? "Submitting..." : "Submit"}
               </Button>
 
               <Button

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -9,12 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { del } from "@/client/api-client";
-import { DeleteIcon, EditIcon, Trash2 } from "lucide-react";
-import { ChevronDownIcon } from "@radix-ui/react-icons";
+import { EditIcon, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import { toast } from "sonner";
+import { useState } from "react";
 
 interface Product {
   id: number;
@@ -23,38 +27,49 @@ interface Product {
   price: number;
 }
 
+// 🔸 Custom hook to delete a product
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
 
-  const deleteCustomerApi = async (id: number) => {
-    console.log("Deleting customer with ID:", id);
-
+  const deleteProductApi = async (id: number) => {
     const res = await del(`/products/${id}`);
-    
-    console.log('Product deleted successfully:', res);
+    toast.success("Product deleted successfully!");
     return res;
   };
 
   return useMutation({
-    mutationFn: deleteCustomerApi,
+    mutationFn: deleteProductApi,
     onSuccess: () => {
-      console.log('Invalidating products list...');
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: (error) => {
-      console.error('Error deleting customer:', error);
+      toast.error("Failed to delete product.");
+      console.error("Error deleting product:", error);
     },
   });
 }
 
+// 🔸 Table Component
 export function ProductTable({ data }: { data: Product[] }) {
-   console.log("data", data);
   const router = useRouter();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const { mutate: deleteProduct, isPending } = useDeleteProduct();
 
-  const handleEdit = (id: number) => {
-    router.push(`/products/${id}`);
-    console.log("Edit product with ID:", id);
+  const confirmDelete = () => {
+    if (selectedId !== null) {
+      deleteProduct(selectedId, {
+        onSuccess: () => {
+          setSelectedId(null);
+          setIsModalOpen(false);
+        },
+        onError: () => {
+          setSelectedId(null);
+          setIsModalOpen(false);
+        },
+      });
+    }
   };
 
   return (
@@ -67,7 +82,6 @@ export function ProductTable({ data }: { data: Product[] }) {
 
       <Table>
         <TableCaption>A list of your products.</TableCaption>
-
         <TableHeader>
           <TableRow>
             <TableHead className="w-[100px]">Name</TableHead>
@@ -85,34 +99,44 @@ export function ProductTable({ data }: { data: Product[] }) {
               <TableCell>{item.price}</TableCell>
               <TableCell>
                 <div className="flex justify-start gap-2">
+                  {/* Edit Button */}
+                  <Link
+                    className={cn(
+                      buttonVariants({ variant: "success", size: "icon" })
+                    )}
+                    href={`/products/${item.id}`}
+                  >
+                    <EditIcon className="h-4 w-4" />
+                  </Link>
 
-                   <Link
-                      className={
-                        cn(
-                          buttonVariants({ variant: "success" , size: "icon" }),
-                        )
-                      }
-                        href={`/products/${item.id}`}
-                    
-                      >
-                        <EditIcon className="h-4 w-4" /> 
-                    </Link>
-
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => deleteProduct(item.id)}
-                      
-                    >
-                      <Trash2 className="h-4 w-4 text-white" />
-                    </Button>
-
+                  {/* Delete Button */}
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    disabled={selectedId === item.id && isPending}
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-white" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={isModalOpen}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setSelectedId(null);
+        }}
+      />
     </div>
   );
 }

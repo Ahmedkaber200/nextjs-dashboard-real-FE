@@ -9,12 +9,14 @@ import {
 } from "@/components/ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { del } from "@/client/api-client";
-import { DeleteIcon, EditIcon, Trash2 } from "lucide-react";
-import { ChevronDownIcon } from "@radix-ui/react-icons";
+import { EditIcon, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useState } from "react";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 interface Customer {
   id: number;
@@ -24,38 +26,39 @@ interface Customer {
   address: string;
 }
 
-export function useDeleteCustomer() {
+export function CustomerTable({ data }: { data: Customer[] }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
 
-  const deleteCustomerApi = async (id: number) => {
-    console.log("Deleting customer with ID:", id);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); 
 
-    const res = await del(`/customers/${id}`);
-    
-    console.log('Customer deleted successfully:', res);
-    return res;
-  };
-
-  return useMutation({
-    mutationFn: deleteCustomerApi,
-    onSuccess: () => {
-      console.log('Invalidating customers list...');
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+  // Delete mutation
+  const { mutate: deleteCustomer, isPending } = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await del(`/customers/${id}`);
+      toast.success("Customer deleted successfully!");
+      return res;
     },
-    onError: (error) => {
-      console.error('Error deleting customer:', error);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setIsModalOpen(false);
+      setSelectedId(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete customer.");
     },
   });
-}
 
-export function CustomerTable({ data }: { data: Customer[] }) {
-  console.log("data", data);
-  const router = useRouter();
-  const { mutate: deleteCustomer, isPending } = useDeleteCustomer();
+  const handleDeleteClick = (id: number) => {
+    setSelectedId(id);       
+    setIsModalOpen(true);
+  };
 
-  const handleEdit = (id: number) => {
-    router.push(`/customers/${id}`);
-    console.log("Edit customer with ID:", id);
+  const confirmDelete = () => {
+    if (selectedId !== null) {
+      deleteCustomer(selectedId);
+    }
   };
 
   return (
@@ -68,7 +71,6 @@ export function CustomerTable({ data }: { data: Customer[] }) {
 
       <Table>
         <TableCaption>A list of your customers.</TableCaption>
-
         <TableHeader>
           <TableRow>
             <TableHead className="w-[100px]">Name</TableHead>
@@ -88,34 +90,40 @@ export function CustomerTable({ data }: { data: Customer[] }) {
               <TableCell>{item.address}</TableCell>
               <TableCell>
                 <div className="flex justify-start gap-2">
-
-                 <Link
-                    className={
-                      cn(
-                        buttonVariants({ variant: "success" , size: "icon" }),
-                      )
-                    }
-                      href={`/customers/${item.id}`}
-                  
-                    >
-                      <EditIcon className="h-4 w-4" /> 
+                  <Link
+                    href={`/customers/${item.id}`}
+                    className={cn(buttonVariants({ variant: "success", size: "icon" }))}
+                  >
+                    <EditIcon className="h-4 w-4" />
                   </Link>
 
                   <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => deleteCustomer(item.id)}
-                      
-                    >
-                      <Trash2 className="h-4 w-4 text-white" />
+                    variant="destructive"
+                    size="icon"
+                    disabled={selectedId === item.id && isPending}
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-white" />
                   </Button>
-
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={isModalOpen}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setSelectedId(null);
+        }}
+      />
     </div>
   );
 }

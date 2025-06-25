@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -11,18 +13,18 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { del } from "@/client/api-client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import React from "react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { DeleteIcon, EditIcon, Trash2 } from "lucide-react";
+import { EditIcon, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
+// ======================
+// 🔸 Type Definitions
+// ======================
 interface Invoice {
   id: number;
   customer_id: number;
@@ -35,11 +37,15 @@ interface Invoice {
   };
 }
 
+// ======================
+// 🔸 Delete Hook
+// ======================
 export function useDeleteInvoice() {
   const queryClient = useQueryClient();
 
   const deleteInvoiceApi = async (id: number) => {
     const res = await del(`/invoices/${id}`);
+    toast.success("Invoice deleted successfully!");
     return res;
   };
 
@@ -49,36 +55,58 @@ export function useDeleteInvoice() {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
     onError: (error) => {
+      toast.error("Failed to delete invoice.");
       console.error("Error deleting invoice:", error);
     },
   });
 }
 
+// ======================
+// 🔸 Invoice Table Component
+// ======================
 export function InvoiceTable({ data }: { data: Invoice[] }) {
   const router = useRouter();
-  const { mutate: deleteInvoice, isPending } = useDeleteInvoice();
   const [openRows, setOpenRows] = useState<number[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const { mutate: deleteInvoice, isPending } = useDeleteInvoice();
+
+  // 🔸 Expand Row Toggle
   const toggleRow = (id: number) => {
     setOpenRows((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
     );
   };
 
+  // 🔸 Confirm Deletion
+  const confirmDelete = () => {
+    if (selectedId !== null) {
+      deleteInvoice(selectedId, {
+        onSuccess: () => {
+          setSelectedId(null);
+          setIsModalOpen(false);
+        },
+        onError: () => {
+          setSelectedId(null);
+          setIsModalOpen(false);
+        },
+      });
+    }
+  };
+
   return (
     <div>
+      {/* 🔹 Header Action */}
       <div className="flex justify-end mb-4">
-        <Button
-          variant="primary"
-          onClick={() => router.push("/invoices/create")}
-        >
+        <Button variant="primary" onClick={() => router.push("/invoices/create")}>
           Create Invoice
         </Button>
       </div>
 
+      {/* 🔹 Table */}
       <Table>
         <TableCaption>A list of your invoices.</TableCaption>
-
         <TableHeader>
           <TableRow>
             <TableHead>Customer</TableHead>
@@ -96,14 +124,12 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
             return (
               <React.Fragment key={item.id}>
                 <TableRow>
-                  <TableCell className="font-medium">
-                    {item.customer?.name}
-                  </TableCell>
+                  <TableCell>{item.customer?.name}</TableCell>
                   <TableCell>{item.total_amount}</TableCell>
                   <TableCell>{item.status}</TableCell>
                   <TableCell>{item.date}</TableCell>
                   <TableCell>
-                    {item.products?.length || 0}
+                    {item.products.length}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -119,22 +145,25 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      {/* Edit Button */}
                       <Link
-                      className={
-                        cn(
-                          buttonVariants({ variant: "success" , size: "icon" }),
-                        )
-                      }
+                        className={cn(
+                          buttonVariants({ variant: "success", size: "icon" })
+                        )}
                         href={`/invoices/${item.id}`}
-                    
                       >
-                        <EditIcon className="h-4 w-4" /> 
+                        <EditIcon className="h-4 w-4" />
                       </Link>
+
+                      {/* Delete Button */}
                       <Button
                         variant="destructive"
                         size="icon"
-                        onClick={() => deleteInvoice(item.id)}
-                        
+                        disabled={selectedId === item.id && isPending}
+                        onClick={() => {
+                          setSelectedId(item.id);
+                          setIsModalOpen(true);
+                        }}
                       >
                         <Trash2 className="h-4 w-4 text-white" />
                       </Button>
@@ -142,12 +171,10 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                   </TableCell>
                 </TableRow>
 
+                {/* Expanded Row: Products */}
                 {isOpen && (
                   <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="bg-gray-50 dark:bg-gray-900"
-                    >
+                    <TableCell colSpan={6} className="bg-gray-50 dark:bg-gray-900">
                       <div className="p-4 space-y-2">
                         <h4 className="font-semibold mb-2">Products</h4>
                         {item.products.map((product) => (
@@ -155,15 +182,9 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                             key={product.id}
                             className="border p-2 rounded bg-white dark:bg-gray-800"
                           >
-                            <p>
-                              <strong>ID:</strong> {product.id}
-                            </p>
-                            <p>
-                              <strong>Name:</strong> {product.name}
-                            </p>
-                            <p>
-                              <strong>Price:</strong> ${product.price}
-                            </p>
+                            <p><strong>ID:</strong> {product.id}</p>
+                            <p><strong>Name:</strong> {product.name}</p>
+                            <p><strong>Price:</strong> ${product.price}</p>
                           </div>
                         ))}
                       </div>
@@ -175,6 +196,16 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
           })}
         </TableBody>
       </Table>
+
+      {/* 🔹 Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={isModalOpen}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setSelectedId(null);
+        }}
+      />
     </div>
   );
 }
