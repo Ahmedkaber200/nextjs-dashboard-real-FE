@@ -19,6 +19,14 @@ import { cn } from "@/lib/utils";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { toast } from "sonner";
 import { useState } from "react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 interface Product {
   id: number;
@@ -55,6 +63,13 @@ export function ProductTable({ data }: { data: Product[] }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = data.slice(startIndex, endIndex);
+
   const { mutate: deleteProduct, isPending } = useDeleteProduct();
 
   const confirmDelete = () => {
@@ -75,7 +90,10 @@ export function ProductTable({ data }: { data: Product[] }) {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <Button variant="primary" onClick={() => router.push("/products/create")}>
+        <Button
+          variant="primary"
+          onClick={() => router.push("/products/create")}
+        >
           Create Product
         </Button>
       </div>
@@ -92,7 +110,7 @@ export function ProductTable({ data }: { data: Product[] }) {
         </TableHeader>
 
         <TableBody>
-          {data?.map((item) => (
+          {paginatedData?.map((item) => (
             <TableRow key={item.id}>
               <TableCell className="font-medium">{item.name}</TableCell>
               <TableCell>{item.description}</TableCell>
@@ -127,6 +145,37 @@ export function ProductTable({ data }: { data: Product[] }) {
           ))}
         </TableBody>
       </Table>
+
+      <Pagination className="mt-4">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            />
+          </PaginationItem>
+
+          {Array.from({ length: Math.ceil(data.length / pageSize) }, (_, i) => (
+            <PaginationItem key={i}>
+              <PaginationLink
+                isActive={currentPage === i + 1}
+                onClick={() => setCurrentPage(i + 1)}
+              >
+                {i + 1}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+
+          <PaginationItem>
+            <PaginationNext
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(prev + 1, Math.ceil(data.length / pageSize))
+                )
+              }
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

@@ -17,6 +17,14 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 interface Customer {
   id: number;
@@ -31,9 +39,14 @@ export function CustomerTable({ data }: { data: Customer[] }) {
   const queryClient = useQueryClient();
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
 
-  // Delete mutation
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = data.slice(startIndex, endIndex);
+
   const { mutate: deleteCustomer, isPending } = useMutation({
     mutationFn: async (id: number) => {
       const res = await del(`/customers/${id}`);
@@ -51,7 +64,7 @@ export function CustomerTable({ data }: { data: Customer[] }) {
   });
 
   const handleDeleteClick = (id: number) => {
-    setSelectedId(id);       
+    setSelectedId(id);
     setIsModalOpen(true);
   };
 
@@ -82,7 +95,7 @@ export function CustomerTable({ data }: { data: Customer[] }) {
         </TableHeader>
 
         <TableBody>
-          {data?.map((item) => (
+          {paginatedData.map((item) => (
             <TableRow key={item.id}>
               <TableCell className="font-medium">{item.name}</TableCell>
               <TableCell>{item.email}</TableCell>
@@ -101,10 +114,7 @@ export function CustomerTable({ data }: { data: Customer[] }) {
                     variant="destructive"
                     size="icon"
                     disabled={selectedId === item.id && isPending}
-                    onClick={() => {
-                      setSelectedId(item.id);
-                      setIsModalOpen(true);
-                    }}
+                    onClick={() => handleDeleteClick(item.id)}
                   >
                     <Trash2 className="h-4 w-4 text-white" />
                   </Button>
@@ -115,7 +125,37 @@ export function CustomerTable({ data }: { data: Customer[] }) {
         </TableBody>
       </Table>
 
-      {/* Delete Confirmation Modal */}
+      <Pagination className="mt-4">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            />
+          </PaginationItem>
+
+          {Array.from({ length: Math.ceil(data.length / pageSize) }, (_, i) => (
+            <PaginationItem key={i}>
+              <PaginationLink
+                isActive={currentPage === i + 1}
+                onClick={() => setCurrentPage(i + 1)}
+              >
+                {i + 1}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+
+          <PaginationItem>
+            <PaginationNext
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(prev + 1, Math.ceil(data.length / pageSize))
+                )
+              }
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+
       <DeleteConfirmationModal
         open={isModalOpen}
         onConfirm={confirmDelete}

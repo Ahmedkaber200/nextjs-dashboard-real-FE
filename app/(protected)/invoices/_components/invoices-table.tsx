@@ -21,6 +21,14 @@ import { cn } from "@/lib/utils";
 import { EditIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 // ======================
 // 🔸 Type Definitions
@@ -70,6 +78,13 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = data.slice(startIndex, endIndex);
+
   const { mutate: deleteInvoice, isPending } = useDeleteInvoice();
 
   // 🔸 Expand Row Toggle
@@ -99,7 +114,10 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
     <div>
       {/* 🔹 Header Action */}
       <div className="flex justify-end mb-4">
-        <Button variant="primary" onClick={() => router.push("/invoices/create")}>
+        <Button
+          variant="primary"
+          onClick={() => router.push("/invoices/create")}
+        >
           Create Invoice
         </Button>
       </div>
@@ -119,7 +137,7 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
         </TableHeader>
 
         <TableBody>
-          {data?.map((item) => {
+          {paginatedData?.map((item) => {
             const isOpen = openRows.includes(item.id);
             return (
               <React.Fragment key={item.id}>
@@ -174,7 +192,10 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                 {/* Expanded Row: Products */}
                 {isOpen && (
                   <TableRow>
-                    <TableCell colSpan={6} className="bg-gray-50 dark:bg-gray-900">
+                    <TableCell
+                      colSpan={6}
+                      className="bg-gray-50 dark:bg-gray-900"
+                    >
                       <div className="p-4 space-y-2">
                         <h4 className="font-semibold mb-2">Products</h4>
                         {item.products.map((product) => (
@@ -182,9 +203,15 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                             key={product.id}
                             className="border p-2 rounded bg-white dark:bg-gray-800"
                           >
-                            <p><strong>ID:</strong> {product.id}</p>
-                            <p><strong>Name:</strong> {product.name}</p>
-                            <p><strong>Price:</strong> ${product.price}</p>
+                            <p>
+                              <strong>ID:</strong> {product.id}
+                            </p>
+                            <p>
+                              <strong>Name:</strong> {product.name}
+                            </p>
+                            <p>
+                              <strong>Price:</strong> ${product.price}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -196,6 +223,37 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
           })}
         </TableBody>
       </Table>
+
+      <Pagination className="mt-4">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            />
+          </PaginationItem>
+
+          {Array.from({ length: Math.ceil(data.length / pageSize) }, (_, i) => (
+            <PaginationItem key={i}>
+              <PaginationLink
+                isActive={currentPage === i + 1}
+                onClick={() => setCurrentPage(i + 1)}
+              >
+                {i + 1}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+
+          <PaginationItem>
+            <PaginationNext
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(prev + 1, Math.ceil(data.length / pageSize))
+                )
+              }
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
 
       {/* 🔹 Delete Confirmation Modal */}
       <DeleteConfirmationModal
