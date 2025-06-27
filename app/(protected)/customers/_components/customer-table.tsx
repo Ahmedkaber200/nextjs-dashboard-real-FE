@@ -25,6 +25,7 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
+import { Input } from "@/components/ui/input"; // ✅ search input کے لیے
 
 interface Customer {
   id: number;
@@ -41,11 +42,17 @@ export function CustomerTable({ data }: { data: Customer[] }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(""); // ✅ search state
   const pageSize = 5;
+
+  // ✅ Search filter
+  const filteredData = data.filter((customer) =>
+    customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedData = data.slice(startIndex, endIndex);
+  const paginatedData = filteredData.slice(startIndex, endIndex);
 
   const { mutate: deleteCustomer, isPending } = useMutation({
     mutationFn: async (id: number) => {
@@ -76,7 +83,19 @@ export function CustomerTable({ data }: { data: Customer[] }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
+      {/* ✅ Search Input */}
+      <div className="flex justify-between items-center mb-4">
+        <Input
+          type="text"
+          placeholder="Search by customer name..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset to first page on search
+          }}
+          className="max-w-sm"
+        />
+
         <Button variant="primary" onClick={() => router.push("/customers/create")}>
           Create Customer
         </Button>
@@ -125,37 +144,44 @@ export function CustomerTable({ data }: { data: Customer[] }) {
         </TableBody>
       </Table>
 
-      <Pagination className="mt-4">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            />
-          </PaginationItem>
-
-          {Array.from({ length: Math.ceil(data.length / pageSize) }, (_, i) => (
-            <PaginationItem key={i}>
-              <PaginationLink
-                isActive={currentPage === i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </PaginationLink>
+      {/* ✅ Pagination */}
+      {filteredData.length > pageSize && (
+        <Pagination className="mt-4">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              />
             </PaginationItem>
-          ))}
 
-          <PaginationItem>
-            <PaginationNext
-              onClick={() =>
-                setCurrentPage((prev) =>
-                  Math.min(prev + 1, Math.ceil(data.length / pageSize))
-                )
-              }
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+            {Array.from(
+              { length: Math.ceil(filteredData.length / pageSize) },
+              (_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink
+                    isActive={currentPage === i + 1}
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
 
+            <PaginationItem>
+              <PaginationNext
+                onClick={() =>
+                  setCurrentPage((prev) =>
+                    Math.min(prev + 1, Math.ceil(filteredData.length / pageSize))
+                  )
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
+      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         open={isModalOpen}
         onConfirm={confirmDelete}

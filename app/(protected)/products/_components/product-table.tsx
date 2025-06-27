@@ -27,6 +27,7 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
+import { Input } from "@/components/ui/input"; // ✅ search input کے لیے
 
 interface Product {
   id: number;
@@ -62,13 +63,18 @@ export function ProductTable({ data }: { data: Product[] }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(""); // ✅ search state
   const pageSize = 5;
+
+    // ✅ Search filter
+  const filteredData = data.filter((product) =>
+  product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedData = data.slice(startIndex, endIndex);
+   const paginatedData = filteredData.slice(startIndex, endIndex);
 
   const { mutate: deleteProduct, isPending } = useDeleteProduct();
 
@@ -89,7 +95,19 @@ export function ProductTable({ data }: { data: Product[] }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
+      {/* ✅ Search Input */}
+      <div className="flex justify-between items-center mb-4">
+        <Input
+          type="text"
+          placeholder="Search by product name..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset to first page on search
+          }}
+          className="max-w-sm"
+        />
+
         <Button
           variant="primary"
           onClick={() => router.push("/products/create")}

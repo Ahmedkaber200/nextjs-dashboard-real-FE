@@ -29,10 +29,8 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
+import { Input } from "@/components/ui/input"; // ✅ Search Input
 
-// ======================
-// 🔸 Type Definitions
-// ======================
 interface Invoice {
   id: number;
   customer_id: number;
@@ -45,9 +43,6 @@ interface Invoice {
   };
 }
 
-// ======================
-// 🔸 Delete Hook
-// ======================
 export function useDeleteInvoice() {
   const queryClient = useQueryClient();
 
@@ -69,32 +64,33 @@ export function useDeleteInvoice() {
   });
 }
 
-// ======================
-// 🔸 Invoice Table Component
-// ======================
 export function InvoiceTable({ data }: { data: Invoice[] }) {
   const router = useRouter();
   const [openRows, setOpenRows] = useState<number[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(""); // ✅ search term
+
   const pageSize = 5;
+
+  // ✅ Filtered by customer.name
+  const filteredData = data.filter((invoice) =>
+    invoice.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedData = data.slice(startIndex, endIndex);
+  const paginatedData = filteredData.slice(startIndex, endIndex);
 
   const { mutate: deleteInvoice, isPending } = useDeleteInvoice();
 
-  // 🔸 Expand Row Toggle
   const toggleRow = (id: number) => {
     setOpenRows((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
     );
   };
 
-  // 🔸 Confirm Deletion
   const confirmDelete = () => {
     if (selectedId !== null) {
       deleteInvoice(selectedId, {
@@ -112,8 +108,19 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
 
   return (
     <div>
-      {/* 🔹 Header Action */}
-      <div className="flex justify-end mb-4">
+      {/* ✅ Search Input */}
+      <div className="flex justify-between items-center mb-4">
+        <Input
+          type="text"
+          placeholder="Search by invoice name..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset to first page on search
+          }}
+          className="max-w-sm"
+        />
+
         <Button
           variant="primary"
           onClick={() => router.push("/invoices/create")}
@@ -122,7 +129,6 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
         </Button>
       </div>
 
-      {/* 🔹 Table */}
       <Table>
         <TableCaption>A list of your invoices.</TableCaption>
         <TableHeader>
@@ -163,7 +169,6 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      {/* Edit Button */}
                       <Link
                         className={cn(
                           buttonVariants({ variant: "success", size: "icon" })
@@ -172,8 +177,6 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                       >
                         <EditIcon className="h-4 w-4" />
                       </Link>
-
-                      {/* Delete Button */}
                       <Button
                         variant="destructive"
                         size="icon"
@@ -189,14 +192,10 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
                   </TableCell>
                 </TableRow>
 
-                {/* Expanded Row: Products */}
                 {isOpen && (
                   <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="bg-gray-50 dark:bg-gray-900"
-                    >
-                      <div className="p-4 space-y-2">
+                    <TableCell colSpan={6}>
+                      <div className="p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
                         <h4 className="font-semibold mb-2">Products</h4>
                         {item.products.map((product) => (
                           <div
@@ -224,38 +223,43 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
         </TableBody>
       </Table>
 
-      <Pagination className="mt-4">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            />
-          </PaginationItem>
-
-          {Array.from({ length: Math.ceil(data.length / pageSize) }, (_, i) => (
-            <PaginationItem key={i}>
-              <PaginationLink
-                isActive={currentPage === i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </PaginationLink>
+      {/* ✅ Pagination */}
+      {filteredData.length > pageSize && (
+        <Pagination className="mt-4">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              />
             </PaginationItem>
-          ))}
 
-          <PaginationItem>
-            <PaginationNext
-              onClick={() =>
-                setCurrentPage((prev) =>
-                  Math.min(prev + 1, Math.ceil(data.length / pageSize))
-                )
-              }
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+            {Array.from(
+              { length: Math.ceil(filteredData.length / pageSize) },
+              (_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink
+                    isActive={currentPage === i + 1}
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
 
-      {/* 🔹 Delete Confirmation Modal */}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() =>
+                  setCurrentPage((prev) =>
+                    Math.min(prev + 1, Math.ceil(filteredData.length / pageSize))
+                  )
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
       <DeleteConfirmationModal
         open={isModalOpen}
         onConfirm={confirmDelete}
