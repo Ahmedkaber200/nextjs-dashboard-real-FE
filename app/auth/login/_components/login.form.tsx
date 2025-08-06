@@ -48,7 +48,9 @@ export function LoginForm({
   const { mutateAsync, isPending } = useMutation({
     mutationFn: (e: z.infer<typeof formSchema>) => post("/login", e),
     onSuccess: (data:any) => {
+    console.log("Logins successful:", data);
         if(data){
+          console.log("Login successful:", data);
           setAuthToken(data.token);
           push('/dashboard');
         }

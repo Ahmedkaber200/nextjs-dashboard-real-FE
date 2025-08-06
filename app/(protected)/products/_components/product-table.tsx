@@ -27,7 +27,7 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/components/ui/pagination";
-import { Input } from "@/components/ui/input"; // ✅ search input کے لیے
+import { Input } from "@/components/ui/input";
 
 interface Product {
   id: number;

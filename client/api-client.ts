@@ -1,7 +1,7 @@
 import Cookies from "js-cookie";
 import { toast } from "sonner";
 
-const BASE_URL = "http://localhost:8000/api";
+const BASE_URL = "https://test-be-dashboard.forweb.tech/api";
 
 interface ApiResponse<T> {
   data?: T;
@@ -14,7 +14,7 @@ type RequestConfig = Omit<RequestInit, "headers"> & {
 };
 
 const getAuthToken = () => Cookies.get("auth_token");
-// console.log('Auth Token:', getAuthToken);
+console.log('Auth Token:', getAuthToken);
 
 // Request Interceptor
 const requestInterceptor = (config: RequestConfig): RequestConfig => {
