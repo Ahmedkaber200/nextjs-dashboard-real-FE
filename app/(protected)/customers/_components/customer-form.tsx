@@ -55,6 +55,8 @@ export function CustomerForm({
 
   const router = useRouter();
   console.log(initialData);
+  type FormValues = z.infer<typeof formSchema>;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {

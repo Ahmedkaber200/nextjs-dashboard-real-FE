@@ -22,7 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { get, post, setAuthToken } from "@/client/api-client";
 import {useRouter} from "next/navigation";
 
@@ -37,29 +37,34 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  type LoginFormValues = {
+    email: string;
+    password: string;
+  };
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
       password: "",
-  },
-  });
-  const {push} = useRouter();
-  const { mutateAsync, isPending } = useMutation({
-    mutationFn: (e: z.infer<typeof formSchema>) => post("/login", e),
-    onSuccess: (data:any) => {
-    console.log("Logins successful:", data);
-        if(data){
-          console.log("Login successful:", data);
-          setAuthToken(data.token);
-          push('/dashboard');
-        }
-        else{
-          console.log("Invalid credentials");
-        }
     },
   });
-  function onSubmit(values: z.infer<typeof formSchema>) {
+
+  const { push } = useRouter();
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: (e: LoginFormValues) => post("/login", e),
+    onSuccess: (data: any) => {
+      console.log("Logins successful:", data);
+      if (data) {
+        console.log("Login successful:", data);
+        setAuthToken(data.token);
+        push('/dashboard');
+      } else {
+        console.log("Invalid credentials");
+      }
+    },
+  });
+  function onSubmit(values: LoginFormValues) {
     mutateAsync(values);
   }
 

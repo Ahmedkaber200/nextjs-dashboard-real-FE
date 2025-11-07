@@ -40,6 +40,7 @@ interface Invoice {
   products: Array<{ id: number; name: string; price: number }>;
   customer: {
     name: string;
+    email: string;
   };
 }
 
@@ -144,6 +145,7 @@ export function InvoiceTable({ data }: { data: Invoice[] }) {
 
         <TableBody>
           {paginatedData?.map((item) => {
+            console.log('Rendering item:', item); // Debugging line
             const isOpen = openRows.includes(item.id);
             return (
               <React.Fragment key={item.id}>
